@@ -1,0 +1,1 @@
+A test file that shows JS outputting from the command line.
