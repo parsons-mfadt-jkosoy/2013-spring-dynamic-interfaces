@@ -1,0 +1,1 @@
+Here's how we'd debug stuff on the server side. You could also have nodejs write to a temporary text file so you could read those logs in a more permanent place.

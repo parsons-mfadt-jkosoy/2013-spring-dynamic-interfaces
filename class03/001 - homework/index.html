@@ -1,0 +1,63 @@
+<html>
+	<head>
+		<script type="text/javascript">
+			function start() {
+				var box = document.getElementById("box");
+				var container = document.getElementById("container");
+
+				var x = 1;
+				var y = 1;
+
+				var xSpeed = 5;
+				var ySpeed = 5;
+
+				var maxX = container.clientWidth;
+				var maxY = container.clientHeight;
+
+				var boxWidth = box.clientWidth;
+				var boxHeight = box.clientHeight;
+
+				setInterval(function() {
+				  if(x+boxWidth >= maxX || x <= 0) {
+				    xSpeed *= -1;
+				  }
+				  
+				  if(y+boxHeight >= maxY || y <= 0) {
+				    ySpeed *= -1;
+				  }
+				  
+				  x+=xSpeed;
+				  y+=ySpeed;
+				  
+				  box.style.marginLeft = x + "px";
+				  box.style.marginTop = y + "px";
+				  
+				},1000/30);
+			}
+		</script>
+
+		<style type="text/css">
+		body {
+		  background:black;
+		}
+
+		#container {
+		  width:500px;
+		  height:100px;
+		  border:5px solid white;
+		}
+
+		#box {
+		  width:10px;
+		  height:10px;
+		  background:white;
+		}
+		</style>
+	</head>
+
+	<body onload="start();">
+		<div id="container">
+  			<div id="box"></div>
+		</div>
+	</body>
+</html>
