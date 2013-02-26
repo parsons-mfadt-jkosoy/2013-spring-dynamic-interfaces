@@ -1,0 +1,46 @@
+<!doctype html>
+<html>
+	<head>
+		<title>Yes!</title>
+
+		<link type="stylesheet" rel="stylesheet" href="./css/main.css" />
+		<script src="/socket.io/socket.io.js"></script>
+		<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.9.0/jquery.min.js"></script>
+
+		<script>
+			// we'll use jQuery now.
+			$(document).ready(function() {
+				var socket = io.connect('http://localhost');
+
+				// jk: set up logic so we know what to do when a result is added.
+				socket.on("result",function(data) {
+					$("#result").html("Yay the result is :: " + data.number);
+				});
+
+
+				$("#add2btn").click(function() {
+					var n = parseInt($("#number").val());
+
+					if(isNaN(n)) {
+						n = 0;
+					}
+
+					socket.emit("add two to this",{number:n});
+					return false; // prevent the form from submitting the oldschool way.
+				})
+			});
+		</script>
+	</head>
+	<body>
+		<h1>The worst calucluator in the world.</h1>
+
+		<input type="text" id="number" />
+
+		<input id="add3btn" type="submit" value="Add Three" />
+		<input id="add2btn" type="submit" value="Add Two" />
+
+		<div id="result">
+
+		</div>
+	</body>
+</html>

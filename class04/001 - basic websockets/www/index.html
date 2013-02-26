@@ -1,0 +1,23 @@
+<!doctype html>
+<html>
+	<head>
+		<title>Yes!</title>
+
+		<link type="stylesheet" rel="stylesheet" href="./css/main.css" />
+		<script src="/socket.io/socket.io.js"></script>
+		<script>
+			var socket = io.connect('http://localhost');
+			socket.on('moop bloop bloopers',function(data) {
+				console.log(data);
+			});
+
+			socket.on('thomas',function() {
+				console.log("WHOOOOO");
+			});
+		</script>
+	</head>
+	<body>
+		<h1>Socckeetttsss.</h1>
+		<p>Check your console.</p>
+	</body>
+</html>
