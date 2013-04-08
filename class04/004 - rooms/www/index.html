@@ -16,7 +16,7 @@
 				var socket = io.connect('http://localhost');
 
 				socket.on('user joined',function(username) {
-					appendMessage("Chat Admin",username + " has joined the room.",["is-admin"]);
+					appendMessage(CHAT_ADMIN_NAME,username + " has joined the room.",["is-admin"]);
 				});
 
 				socket.on('user left',function(username) {
@@ -73,7 +73,7 @@
 				// changing usernames
 				$("#username").keyup(function(evt) {
 					if(evt.keyCode == KEYCODE_ENTER_BUTTON) {
-						var newUsername = $.trim($(this).val());
+						var newUsername = $.trim($("#username").val());
 						if(newUsername != "") {
 							var data = {};
 							data.room = room;
@@ -96,18 +96,18 @@
 						var data = {};
 						data.room = room;
 						data.username = username;
-						data.message = $(this).val();
+						data.message = $("#chatbox").val();
 
 						socket.emit('chat',data);
 						appendMessage(data.username,data.message,["is-me"]);
 
-						$(this).val(""); // clears the box for the next message.
+						$("#chatbox").val(""); // clears the box for the next message.
 					}
 
 					return false;
 				})
 
-				$("#username").val(username);
+				$("#username").val(username); // fills out the username input with our value.
 				$("select").trigger("change"); // force the lobby to be selected.
 			});
 		</script>

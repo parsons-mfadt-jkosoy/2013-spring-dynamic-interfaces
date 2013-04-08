@@ -1,0 +1,299 @@
+<!doctype html>
+<html>
+	<head>
+		<title>Facebook Secure Messenger</title>
+
+		<link type="stylesheet" rel="stylesheet" href="./css/reset.css" />
+		<link type="stylesheet" rel="stylesheet" href="./css/main.css" />
+		<link type="stylesheet" rel="stylesheet" href="./css/jquery-ui-1.10.0.custom.min.css" />
+
+		<script src="/socket.io/socket.io.js"></script>
+		<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.9.0/jquery.min.js"></script>
+		<script src="js/jquery-ui.min.js"></script>
+
+		<script>
+			var CHAT_ADMIN_NAME = "Chat Admin";
+			var KEYCODE_ENTER_BUTTON = 13;
+
+			$(document).ready(function() {
+				var socket = io.connect('http://chicken-parm.local');
+				var secretCode = false;
+				var facebookId = false;
+				var action = false;
+				var otherFacebookIdsHere = [];
+				var facebookAccessToken = false;
+				var whoWeInvited = false;
+
+				function initSockets() {
+					socket.emit('join room',{ room: secretCode, facebookId: facebookId });
+
+					socket.on('user joined',function(otherFacebookId,otherAction) {
+						if(otherFacebookIdsHere.indexOf(otherFacebookId) == -1) {
+							// determine what we need to do with the other user
+							otherFacebookIdsHere.push(otherFacebookId);
+
+							if( (otherAction == 'join' && action == 'join') || (action == 'send' && whoWeInvited != otherFacebookId) || otherFacebookIdsHere.length > 1) {
+								showSecurityBreach();
+							}
+							else {
+								addPhoto("them",otherFacebookId);
+								showSecretMessage();
+								doneWaitingForOtherUser();
+							}
+
+							// let that new user know we're here, too.
+							socket.emit('join room',{ room: secretCode, facebookId: facebookId, action: action });
+						}
+					});
+
+					socket.on('user left',function(otherFacebookId) {
+						// make the other person leave the room.
+						otherFacebookIdsHere.splice(otherFacebookIdsHere.indexOf(otherFacebookId));
+						hideSecurityBreach();
+						hideSecretMessage();
+
+					});
+				}
+
+				function showSecurityBreach() {
+					$("#security-breach").show();
+					setTimeout(function() {
+						$("#security-breach .right").removeClass("open");
+						$("#security-breach .left").removeClass("open");
+
+						setTimeout(function() {
+							$("#security-breach h1").show();
+						},500);
+
+					},500);
+				}
+
+				function hideSecurityBreach() {
+					$("#security-breach .right").addClass("open");
+					$("#security-breach .left").addClass("open");
+					$("#security-breach h1").hide();
+					setTimeout(function() {
+						$("#security-breach").hide();
+					},500);
+				}
+
+				function showSecretMessage() {
+					$("#you").addClass("open");
+					$("#them").addClass("open");
+				}
+
+				function hideSecretMessage() {
+					$("#you").removeClass("open");
+					$("#them").removeClass("open");
+
+					waitForOtherUser();
+				}
+
+				// friends autocomplete modified from https://gist.github.com/1635158
+				function initFriendsMenu() {
+					var tokenUrl = "https://graph.facebook.com/me/friends?access_token=" + facebookAccessToken + "&callback=?";
+
+					var input = $("#friends-menu input");
+					input.autocomplete({
+						source: function(request, add) {
+							// Call out to the Graph API for the friends list
+							$.ajax({
+								url: tokenUrl,
+								dataType: "jsonp",
+								success: function(results){
+									// Filter the results and return a label/value object array  
+									var formatted = [];
+									for(var i = 0; i< results.data.length; i++) {
+										if (results.data[i].name.toLowerCase().indexOf(input.val().toLowerCase()) >= 0)
+										formatted.push({
+											label: results.data[i].name,
+											value: results.data[i].name,
+											facebookId: results.data[i].id
+										})
+									}
+									add(formatted);
+								}
+							});
+						},
+						select: function(event, ui) {
+							whoWeInvited = ui.item.facebookId;
+							waitForOtherUser();
+							killFriendsMenu();
+
+							return false;
+						},
+						change: function(event, ui) {
+							var otherFacebookId = ui.item.facebookId;
+							return false;
+						},
+						minLength: 2
+					});
+				}
+
+				function killFriendsMenu() {
+					$("#friends-menu").remove();
+				}
+
+				function waitForOtherUser() {
+					$("#them img").remove();
+					$("#spinner").show();
+				}
+
+				function doneWaitingForOtherUser() {
+					$("#spinner").hide();
+				}
+
+				function hideIntroScreen() {
+					$("#start").bind("webkitTransitionEnd", function(){
+						$("#start").unbind("webkitTransitionEnd");
+						$("#start").hide();
+
+						addPhoto("you",facebookId);
+
+						if(action == 'send') {
+							initFriendsMenu();
+						}
+						else {
+							killFriendsMenu();
+							if(otherFacebookIdsHere.length == 0) {
+								waitForOtherUser();
+							}
+						}
+
+						$("#main").addClass("is-animate-in");
+
+					}).addClass("is-animate-out");
+				}
+
+				function addPhoto(div,facebookId) {
+					var pictureUrl = "http://graph.facebook.com/" + facebookId + "/picture?width=300";
+					$("#" + div).find("img").remove();
+					$("#" + div).append("<img src='" +  pictureUrl + "' />");
+				}
+
+				function loginToFacebook() {
+					action = $(this).attr('data-action');
+
+					// check to make sure if we're joining a user has entered a code
+					if(action == 'join') {
+						var code = $.trim($("#secret-code").val());
+						if(code == "") {
+							// if we cared a bit more about UX we'd provide an error message here.
+							return false; // prevent the code from continuing to logging in.
+						}
+					}
+
+					FB.login(function(response) {
+						// and if we're successful...
+						if(response.authResponse) {
+							facebookAccessToken = response.authResponse.accessToken;
+
+							// get the users information...
+							FB.api('/me', function(response) {
+								facebookId = response.id;
+
+								if(action == 'send') {
+									secretCode = 'a' + new Date().getTime();
+								}
+								else {
+									secretCode = code;
+								}
+
+								$("#secret-code").val(secretCode).attr('disabled=disabled');
+								initSockets();
+								hideIntroScreen();
+					     	});
+					   	}
+					});
+
+					return false;
+				}
+
+				// set up our button clicks
+
+				$("#start a").click(loginToFacebook);
+			});
+		</script>
+	</head>
+	<body>
+<div id="fb-root"></div>
+		<script>
+		  window.fbAsyncInit = function() {
+		    // init the FB JS SDK
+		    FB.init({
+		      appId      : '481068241913822', // App ID from the App Dashboard
+		      channelUrl : '//WWW.YOUR_DOMAIN.COM/channel.html', // Channel File for x-domain communication
+		      status     : true, // check the login status upon init?
+		      cookie     : true, // set sessions cookies to allow your server to access the session?
+		      xfbml      : true  // parse XFBML tags on this page?
+		    });
+
+		    // Additional initialization code such as adding Event Listeners goes here
+
+		  };
+
+		  // Load the SDK's source Asynchronously
+		  // Note that the debug version is being actively developed and might 
+		  // contain some type checks that are overly strict. 
+		  // Please report such bugs using the bugs tool.
+		  (function(d, debug){
+		     var js, id = 'facebook-jssdk', ref = d.getElementsByTagName('script')[0];
+		     if (d.getElementById(id)) {return;}
+		     js = d.createElement('script'); js.id = id; js.async = true;
+		     js.src = "//connect.facebook.net/en_US/all" + (debug ? "/debug" : "") + ".js";
+		     ref.parentNode.insertBefore(js, ref);
+		   }(document, /*debug*/ false));
+		</script>
+
+		<div class="container">
+			<div id="start">
+				<a href="#" data-action="send">Send</a>
+				<a href="#" data-action="join">Join</a>
+			</div>
+		</div>
+
+		<div class="container">
+			<div id="code">
+				<h2>Code Name</h2>
+				<input type="text" id="secret-code" />
+			</div>
+		</div>
+
+		<div>
+			<div id="main">
+				<div id="connection-window">
+					<div id="secret-message">
+						<!-- bonus challenge: can you use the HTML5 drag and drop functionality to send a file from here? -->
+						<p>This is the secret message. Normally this would not just be in plain source code.</p>
+					</div>
+
+					<div class="in-front">
+
+						<div id="you" class="left"></div>
+
+						<div id="them" class="right">
+
+							<div id="friends-menu">
+								<input name="friend-autocomplete" type="text" />
+							</div>
+
+
+						</div>
+
+					</div>
+				</div>
+
+			</div>
+
+			<div id="spinner"></div>
+
+			<div id="security-breach">
+				<div class="big-red-box left open"></div>
+				<div class="big-red-box right open"></div>
+
+				<h1>Security Breach. This secure channel has been destroyed.</h1>
+			</div>
+
+		</div>
+	</body>
+</html>

@@ -36,7 +36,7 @@ var server = http.createServer(function(req,res) {
 		// if it doesn't exist lets make sure we load error404.html
 		if(!doesItExist) {
 			httpStatusCode = 404;
-			fileToLoad = webroot + "error404.html";
+			fileToLoad = webroot + "/error404.html";
 		}
 
 		fileBytes = fs.readFileSync(fileToLoad);
